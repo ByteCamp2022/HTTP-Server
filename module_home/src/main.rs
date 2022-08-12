@@ -1,13 +1,12 @@
 wit_bindgen_rust::import!("../imports.wit");
 wit_bindgen_rust::export!("../exports.wit");
 
-
 struct Exports;
 
 impl exports::Exports for Exports {
 
     fn proxy(name: String, param: String) -> String{
-        println!("\tUsing module_200");
+        println!("\tUsing module_home");
         match name.as_str() {
             "responseStatus" => {
                 return responseStatus();
@@ -36,7 +35,7 @@ fn response_HTML(path: &str) -> String {
 }
 
 fn response(path: &str) -> String {
-    println!("\t\tUsing function: response(path: String) in module_200");
+    println!("\t\tUsing function: response(path: String) in module_home");
     let status = responseStatus();
     let contents = response_HTML(path);
     let resp = format!(

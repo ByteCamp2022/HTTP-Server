@@ -3,8 +3,8 @@ use lazy_static::*;
 use std::sync::Mutex;
 use anyhow::Result;
 use wasmtime::{*};
-use std::fs;
 use std::io::prelude::*;
+use std::fs;
 use std::net::TcpListener;
 use std::net::TcpStream;
 
@@ -16,8 +16,7 @@ use imports::*;
 use exports::*;
 
 fn responseStatus(s: String) -> String {
-    let status = String::from("HTTP/1.1 200 OK");
-    return status;
+    return s;
 }
 
 fn response_HTML(path: String) -> String {
@@ -25,17 +24,8 @@ fn response_HTML(path: String) -> String {
     return html;
 }
 
-fn response(path: String) -> String {
-    let s = String::from(" ");
-    let status = responseStatus(s);
-    let contents = response_HTML(path);
-    let resp = format!(
-        "{}\r\nContent-Length: {}\r\n\r\n{}",
-        status,
-        contents.len(),
-        contents
-    );
-    return resp;
+fn response(s: String) -> String {
+    return s;
 }
 
 #[derive(Default)]
@@ -159,16 +149,16 @@ impl Imports for MyImports {
 }
 
 fn main() -> Result<()> {
+    registry("responseStatus", responseStatus);
+    registry("response_HTML", response_HTML);
+    registry("response", response);
+
     let listener = TcpListener::bind("127.0.0.1:7878").unwrap();
 
     for stream in listener.incoming() {
         let mut stream = stream.unwrap();
-        
         streram_handle(&mut stream);
     }
-
-
-
 
     Ok(())
 }
@@ -177,16 +167,23 @@ fn streram_handle(stream: &mut TcpStream) {
     let mut buffer = [0; 1024];
     stream.read(&mut buffer).unwrap();
    
-    registry("responseStatus", responseStatus);
-    registry("response_HTML", response_HTML);
-    registry("response", response);
+    let sucess = b"GET / HTTP/1.1\r\n";
+    let home = b"GET /home HTTP/1.1\r\n";
 
-    registry_module("module_200.wasm", "module_200");
-    let status =  call_module_func("module_200", "responseStatus", " ");
-    let contents = call_module_func("module_200", "response_HTML", "hello.html");
-    let resp = call_module_func("module_200", "response", "hello.html");
-    println!("{}", resp);
-
+    let resp = if buffer.starts_with(sucess) {
+        println!("module_200 loaded.");
+        registry_module("module_200.wasm", "module_200");
+        call_module_func("module_200", "response", "hello.html")
+    } else if buffer.starts_with(home) {
+        println!("module_home loaded.");
+        registry_module("module_home.wasm", "module_home");
+        call_module_func("module_home", "response", "home.html")
+    } else {
+        println!("module_404 loaded.");
+        registry_module("module_404.wasm", "module_404");
+        call_module_func("module_404", "response", "404.html")
+    };
+    
     stream.write(resp.as_bytes()).unwrap();
     stream.flush().unwrap();
 }
